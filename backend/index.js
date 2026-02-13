@@ -7,7 +7,10 @@ import verifyFirebaseToken from "./middleware/authMiddleware.js";
 import cors from "cors";
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: "https://notesweb-two.vercel.app",
+    credentials: true,
+}));
 import { User, Note } from "./db.js";
 
 
@@ -44,7 +47,7 @@ app.post("/notes", verifyFirebaseToken, async (req, res) => {
     await note.save();
     console.log("Note saved successfully");
 
-    // Send email but DO NOT crash if it fails
+   
     try {
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
