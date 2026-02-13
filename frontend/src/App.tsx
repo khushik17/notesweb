@@ -7,7 +7,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<Login/>} />
-        <Route path="/notes" element={<NotePage />} />  {/* /note se /notes kiya */}
+        <Route path="/note" element={<NotePage />} /> 
       </Routes>
     </Router>
   )

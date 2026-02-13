@@ -11,7 +11,7 @@ export default function Login() {
       const result = await signInWithPopup(auth, provider);
       const token = await result.user.getIdToken();
       localStorage.setItem("token", token);
-      navigate("/note");
+      navigate("/notes");
     } catch (error) {
       console.error("Login error:", error);
     }
