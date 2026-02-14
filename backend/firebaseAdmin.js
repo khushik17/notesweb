@@ -11,9 +11,9 @@ try {
       privateKey: process.env.FIREBASE_private_key?.replace(/\\n/g, "\n"),
     }),
   });
-  console.log("✅ Firebase Admin initialized");
+  console.log(" Firebase Admin initialized");
 } catch (error) {
-  console.error("❌ Firebase Admin initialization error:", error.message);
+  console.error(" Firebase Admin initialization error:", error.message);
   process.exit(1);
 }
 
