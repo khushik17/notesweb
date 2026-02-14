@@ -92,10 +92,7 @@ app.post("/notes", verifyFirebaseToken, async (req, res) => {
     await note.save();
     console.log("✅ Note saved to DB:", note._id);
 
-    // Send email notification (non-blocking)
-    sendNoteCreatedEmail(req.user.email, title);
-
-    // IMPORTANT: Return the created note with all fields
+    // IMPORTANT: Return the created note with all fields FIRST
     const createdNote = {
       _id: note._id,
       title: note.title,
@@ -105,8 +102,13 @@ app.post("/notes", verifyFirebaseToken, async (req, res) => {
       updatedAt: note.updatedAt,
     };
 
-    console.log("✅ Sending response:", createdNote);
+    console.log("✅ Sending response");
     res.status(201).json(createdNote);
+
+    // Send email AFTER response (completely non-blocking)
+    process.nextTick(() => {
+      sendNoteCreatedEmail(req.user.email, title);
+    });
 
   } catch (error) {
     console.error("❌ Error creating note:", error);
