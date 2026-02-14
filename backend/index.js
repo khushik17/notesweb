@@ -1,112 +1,190 @@
 import dotenv from "dotenv";
-dotenv.config({ path: "./.env" });
+dotenv.config();
 
 import express from "express";
+import cors from "cors";
 import nodemailer from "nodemailer";
 import verifyFirebaseToken from "./middleware/authMiddleware.js";
-import cors from "cors";
-const app = express();
-app.use(express.json());
-app.use(cors({
-    origin: ["https://notesweb-two.vercel.app", "http://localhost:5173"],
-    credentials: true,
-}));
 import { User, Note } from "./db.js";
 
+const app = express();
 
+// Middleware
+app.use(express.json());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ["https://notesweb-two.vercel.app"]
+    : ["http://localhost:5173", "http://localhost:3000"],
+  credentials: true,
+}));
 
-console.log("EMAIL_USER:", process.env.EMAIL_USER);
-console.log("EMAIL_PASS:", process.env.EMAIL_PASS);
-
+// Nodemailer Configuration
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
-    
   },
-  
 });
 
+// Verify email configuration on startup
+transporter.verify((error, success) => {
+  if (error) {
+    console.log("⚠️ Email configuration error:", error.message);
+  } else {
+    console.log("✅ Email server ready");
+  }
+});
 
+// Helper function to send email
+const sendNoteCreatedEmail = async (email, title) => {
+  try {
+    console.log("📧 Sending email to:", email);
+    
+    const info = await transporter.sendMail({
+      from: `"Lead Notes App" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "New Note Created 📝",
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9;">
+          <h2 style="color: #333;">Note Created Successfully!</h2>
+          <p>Your note titled <strong>"${title}"</strong> has been created.</p>
+          <p style="color: #666;">Date: ${new Date().toLocaleString()}</p>
+          <hr style="border: 1px solid #ddd;">
+          <p style="font-size: 12px; color: #999;">This is an automated email from Lead Notes App</p>
+        </div>
+      `,
+    });
+    
+    console.log("✅ Email sent successfully:", info.messageId);
+  } catch (error) {
+    console.log("⚠️ Email failed:", error.message);
+  }
+};
+
+// Routes
+
+// Health check
+app.get("/", (req, res) => {
+  res.json({ message: "Lead Notes API is running!", status: "OK" });
+});
+
+// Create Note
 app.post("/notes", verifyFirebaseToken, async (req, res) => {
   try {
-    console.log("POST /notes hit");
-    console.log("req.body:", req.body);
-    console.log("req.user:", req.user);
+    console.log("📝 POST /notes - Creating note");
+    console.log("User:", req.user.email);
+    console.log("Body:", req.body);
 
     const { title, description } = req.body;
 
+    if (!title || !title.trim()) {
+      console.log("❌ Title missing");
+      return res.status(400).json({ error: "Title is required" });
+    }
+
     const note = new Note({
-      title,
-      description,
+      title: title.trim(),
+      description: description?.trim() || "",
       user: req.user._id,
     });
 
-    console.log("Saving note...");
     await note.save();
-    console.log("Note saved successfully");
+    console.log("✅ Note saved to DB:", note._id);
 
-   
-    try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: req.user.email,
-        subject: "New Note Created",
-        text: `A new note titled "${title}" has been created.`,
-      });
-      console.log("Email sent successfully");
-    } catch (emailError) {
-      console.log("Email failed but note saved:", emailError.message);
-    }
+    // Send email notification (non-blocking)
+    sendNoteCreatedEmail(req.user.email, title);
 
-    res.status(201).json(note);
+    // IMPORTANT: Return the created note with all fields
+    const createdNote = {
+      _id: note._id,
+      title: note.title,
+      description: note.description,
+      user: note.user,
+      createdAt: note.createdAt,
+      updatedAt: note.updatedAt,
+    };
+
+    console.log("✅ Sending response:", createdNote);
+    res.status(201).json(createdNote);
 
   } catch (error) {
-    console.error("ACTUAL SAVE ERROR:", error);
+    console.error("❌ Error creating note:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
-app.get("/notes", verifyFirebaseToken, async (req, res)=>{
-    try{
-        const notes = await Note.find({user : req.user._id});
-        res.status(200).json(notes);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }})
+// Get All Notes
+app.get("/notes", verifyFirebaseToken, async (req, res) => {
+  try {
+    console.log("📋 GET /notes - Fetching notes for user:", req.user.email);
+    
+    const notes = await Note.find({ user: req.user._id }).sort({ createdAt: -1 });
+    
+    console.log(`✅ Found ${notes.length} notes`);
+    res.status(200).json(notes);
+  } catch (error) {
+    console.error("❌ Error fetching notes:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
-   app.put("/notes/:id", verifyFirebaseToken, async (req, res) => {
-    try {
-        const noteId = req.params.id;
-        const { title, description } = req.body;
-        const note = await Note.findOneAndUpdate(
-            { _id: noteId, user: req.user._id },
-            { title, description },
-            { new: true }
-        );
-        if (!note) {
-            return res.status(404).json({ error: "Note not found or unauthorized" });
-        }
-        res.status(200).json(note);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }})
+// Update Note
+app.put("/notes/:id", verifyFirebaseToken, async (req, res) => {
+  try {
+    console.log("✏️ PUT /notes/:id - Updating note:", req.params.id);
+    
+    const { id } = req.params;
+    const { title, description } = req.body;
 
+    const note = await Note.findOneAndUpdate(
+      { _id: id, user: req.user._id },
+      { title, description, updatedAt: Date.now() },
+      { new: true, runValidators: true }
+    );
 
- app.delete("/notes/:id", verifyFirebaseToken, async (req, res) => {
-    try{
-        const noteId = req.params.id;
-        const note = await Note.findOneAndDelete({_id : noteId, user : req.user._id});
-        if (!note) {
-            return res.status(404).json({ error: "Note not found or unauthorized" });
-        }
-        res.status(200).json({ message: "Note deleted successfully" });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }})
+    if (!note) {
+      console.log("❌ Note not found or unauthorized");
+      return res.status(404).json({ error: "Note not found or unauthorized" });
+    }
 
-   const port = process.env.PORT || 3000;
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+    console.log("✅ Note updated");
+    res.status(200).json(note);
+  } catch (error) {
+    console.error("❌ Error updating note:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete Note
+app.delete("/notes/:id", verifyFirebaseToken, async (req, res) => {
+  try {
+    console.log("🗑️ DELETE /notes/:id - Deleting note:", req.params.id);
+    
+    const { id } = req.params;
+
+    const note = await Note.findOneAndDelete({ _id: id, user: req.user._id });
+
+    if (!note) {
+      console.log("❌ Note not found or unauthorized");
+      return res.status(404).json({ error: "Note not found or unauthorized" });
+    }
+
+    console.log("✅ Note deleted");
+    res.status(200).json({ message: "Note deleted successfully", note });
+  } catch (error) {
+    console.error("❌ Error deleting note:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 404 Handler
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
+});
+
+// Start Server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
