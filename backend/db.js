@@ -66,10 +66,8 @@ const noteSchema = new Schema({
   },
 });
 
-
 noteSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
-  next();
 });
 
 const User = mongoose.model("User", userSchema);
