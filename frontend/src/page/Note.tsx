@@ -51,31 +51,48 @@ export default function NotePage() {
       return;
     }
 
-    try {
-      setLoading(true);
-      setError("");
+    // Prevent multiple submissions
+    if (loading) {
+      console.log("⏸️ Already submitting...");
+      return;
+    }
 
+    const currentTitle = title.trim();
+    const currentDescription = description.trim();
+
+    setLoading(true);
+    setError("");
+
+    try {
       console.log("🚀 Creating note...");
 
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/notes`,
-        { title: title.trim(), description: description.trim() },
+        { title: currentTitle, description: currentDescription },
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-          timeout: 30000,
+          timeout: 60000,
         }
       );
 
       console.log("✅ Note created:", response.data);
 
-      // Immediately add to UI (optimistic update)
-      setNotes([response.data, ...notes]);
-
-      // Clear form
-      setTitle("");
-      setDescription("");
+      // Verify response has data
+      if (response.data && response.data._id) {
+        // Add to beginning of notes array
+        setNotes(prevNotes => [response.data, ...prevNotes]);
+        
+        // Clear form only after successful add
+        setTitle("");
+        setDescription("");
+        
+        console.log("✅ Note added to UI");
+      } else {
+        console.error("❌ Invalid response:", response.data);
+        setError("Invalid response from server");
+      }
 
     } catch (error: any) {
       console.error("❌ Add note error:", error);
@@ -90,6 +107,7 @@ export default function NotePage() {
       }
     } finally {
       setLoading(false);
+      console.log("🏁 Request finished");
     }
   };
 
