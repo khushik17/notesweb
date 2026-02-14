@@ -53,7 +53,7 @@ export default function NotePage() {
 
     // Prevent multiple submissions
     if (loading) {
-      console.log("⏸️ Already submitting...");
+      console.log(" Already submitting...");
       return;
     }
 
@@ -64,7 +64,7 @@ export default function NotePage() {
     setError("");
 
     try {
-      console.log("🚀 Creating note...");
+      console.log("Creating note...");
 
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/notes`,
@@ -77,7 +77,7 @@ export default function NotePage() {
         }
       );
 
-      console.log("✅ Note created:", response.data);
+      console.log(" Note created:", response.data);
 
       // Verify response has data
       if (response.data && response.data._id) {
@@ -88,14 +88,14 @@ export default function NotePage() {
         setTitle("");
         setDescription("");
         
-        console.log("✅ Note added to UI");
+        console.log(" Note added to UI");
       } else {
-        console.error("❌ Invalid response:", response.data);
+        console.error(" Invalid response:", response.data);
         setError("Invalid response from server");
       }
 
     } catch (error: any) {
-      console.error("❌ Add note error:", error);
+      console.error(" Add note error:", error);
 
       if (error.code === 'ECONNABORTED') {
         setError("Request timeout. Backend is slow - try again!");
@@ -107,7 +107,7 @@ export default function NotePage() {
       }
     } finally {
       setLoading(false);
-      console.log("🏁 Request finished");
+      console.log(" Request finished");
     }
   };
 
@@ -117,7 +117,7 @@ export default function NotePage() {
     }
 
     try {
-      console.log("🗑️ Deleting note:", id);
+      console.log(" Deleting note:", id);
 
       await axios.delete(`${import.meta.env.VITE_API_URL}/notes/${id}`, {
         headers: {
@@ -125,13 +125,13 @@ export default function NotePage() {
         },
       });
 
-      console.log("✅ Note deleted");
+      console.log(" Note deleted");
 
       // Optimistically remove from UI
       setNotes(notes.filter(note => note._id !== id));
 
     } catch (error: any) {
-      console.error("❌ Delete error:", error.response?.data || error.message);
+      console.error("Delete error:", error.response?.data || error.message);
       setError(error.response?.data?.error || "Failed to delete note");
     }
   };
