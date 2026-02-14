@@ -9,9 +9,9 @@ import { User, Note } from "./db.js";
 
 const app = express();
 
-// Middleware
+
 app.use(express.json());
-// Middleware
+
 app.use(express.json());
 
 // CORS - Allow all origins in development
@@ -30,7 +30,7 @@ const transporter = nodemailer.createTransport({
     user: "apikey",
     pass: process.env.SENDGRID_API_KEY,
   },
-  connectionTimeout: 30000, // 30 seconds
+  connectionTimeout: 30000, 
   greetingTimeout: 30000,
   socketTimeout: 30000,
 });
@@ -38,16 +38,16 @@ const transporter = nodemailer.createTransport({
 // Verify email configuration on startup
 transporter.verify((error, success) => {
   if (error) {
-    console.log("⚠️ Email configuration error:", error.message);
+    console.log(" Email configuration error:", error.message);
     console.log("Full error:", error);
   } else {
-    console.log("✅ SendGrid email server ready");
+    console.log(" SendGrid email server ready");
   }
 });
 
 const sendNoteCreatedEmail = async (email, title, description, createdAt, userName) => {
   try {
-    console.log("📧 Sending email to:", email);
+    console.log(" Sending email to:", email);
     
     const info = await transporter.sendMail({
       from: `"📝 Notes App" <${process.env.EMAIL_USER}>`,
@@ -315,32 +315,32 @@ const sendNoteCreatedEmail = async (email, title, description, createdAt, userNa
       `,
     });
     
-    console.log("✅ Email sent successfully:", info.messageId);
+    console.log(" Email sent successfully:", info.messageId);
   } catch (error) {
-    console.log("⚠️ Email failed:", error.message);
+    console.log(" Email failed:", error.message);
   }
 };
 
 
 // Routes
 
-// Health check
+
 app.get("/", (req, res) => {
   res.json({ message: "Lead Notes API is running!", status: "OK" });
 });
 
-// Create Note
+
 // Create Note
 app.post("/notes", verifyFirebaseToken, async (req, res) => {
   try {
-    console.log("📝 POST /notes - Creating note");
+    console.log(" POST /notes - Creating note");
     console.log("User:", req.user.email);
     console.log("Body:", req.body);
 
     const { title, description } = req.body;
 
     if (!title || !title.trim()) {
-      console.log("❌ Title missing");
+      console.log(" Title missing");
       return res.status(400).json({ error: "Title is required" });
     }
 
@@ -351,12 +351,12 @@ app.post("/notes", verifyFirebaseToken, async (req, res) => {
     });
 
     await note.save();
-    console.log("✅ Note saved to DB:", note._id);
+    console.log(" Note saved to DB:", note._id);
 
     // Send email notification with description (non-blocking)
     sendNoteCreatedEmail(req.user.email, note.title, note.description, note.createdAt);
 
-    // Return the created note with all fields
+    
     const createdNote = {
       _id: note._id,
       title: note.title,
@@ -366,11 +366,11 @@ app.post("/notes", verifyFirebaseToken, async (req, res) => {
       updatedAt: note.updatedAt,
     };
 
-    console.log("✅ Sending response:", createdNote);
+    console.log(" Sending response:", createdNote);
     res.status(201).json(createdNote);
 
   } catch (error) {
-    console.error("❌ Error creating note:", error);
+    console.error(" Error creating note:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -379,14 +379,14 @@ app.post("/notes", verifyFirebaseToken, async (req, res) => {
 // Get All Notes
 app.get("/notes", verifyFirebaseToken, async (req, res) => {
   try {
-    console.log("📋 GET /notes - Fetching notes for user:", req.user.email);
+    console.log(" GET /notes - Fetching notes for user:", req.user.email);
     
     const notes = await Note.find({ user: req.user._id }).sort({ createdAt: -1 });
     
-    console.log(`✅ Found ${notes.length} notes`);
+    console.log(` Found ${notes.length} notes`);
     res.status(200).json(notes);
   } catch (error) {
-    console.error("❌ Error fetching notes:", error);
+    console.error("Error fetching notes:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -394,7 +394,7 @@ app.get("/notes", verifyFirebaseToken, async (req, res) => {
 // Update Note
 app.put("/notes/:id", verifyFirebaseToken, async (req, res) => {
   try {
-    console.log("✏️ PUT /notes/:id - Updating note:", req.params.id);
+    console.log(" PUT /notes/:id - Updating note:", req.params.id);
     
     const { id } = req.params;
     const { title, description } = req.body;
@@ -406,14 +406,14 @@ app.put("/notes/:id", verifyFirebaseToken, async (req, res) => {
     );
 
     if (!note) {
-      console.log("❌ Note not found or unauthorized");
+      console.log(" Note not found or unauthorized");
       return res.status(404).json({ error: "Note not found or unauthorized" });
     }
 
-    console.log("✅ Note updated");
+    console.log(" Note updated");
     res.status(200).json(note);
   } catch (error) {
-    console.error("❌ Error updating note:", error);
+    console.error(" Error updating note:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -421,21 +421,21 @@ app.put("/notes/:id", verifyFirebaseToken, async (req, res) => {
 // Delete Note
 app.delete("/notes/:id", verifyFirebaseToken, async (req, res) => {
   try {
-    console.log("🗑️ DELETE /notes/:id - Deleting note:", req.params.id);
+    console.log(" DELETE /notes/:id - Deleting note:", req.params.id);
     
     const { id } = req.params;
 
     const note = await Note.findOneAndDelete({ _id: id, user: req.user._id });
 
     if (!note) {
-      console.log("❌ Note not found or unauthorized");
+      console.log(" Note not found or unauthorized");
       return res.status(404).json({ error: "Note not found or unauthorized" });
     }
 
-    console.log("✅ Note deleted");
+    console.log(" Note deleted");
     res.status(200).json({ message: "Note deleted successfully", note });
   } catch (error) {
-    console.error("❌ Error deleting note:", error);
+    console.error(" Error deleting note:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -448,5 +448,5 @@ app.use((req, res) => {
 // Start Server
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(` Server running on port ${PORT}`);
 });
