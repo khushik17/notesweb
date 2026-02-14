@@ -293,7 +293,7 @@ const sendNoteCreatedEmail = async (email, title, description, createdAt, userNa
               
               <!-- CTA Button -->
               <div class="button-container">
-                <a href="http://localhost:5173/notes" class="cta-button">
+                <a href="https://notesweb-two.vercel.app/notes" class="cta-button">
                   View All Notes
                 </a>
               </div>
