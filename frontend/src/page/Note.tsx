@@ -107,7 +107,7 @@ export default function NotePage() {
       }
     } finally {
       setLoading(false);
-      console.log("🏁 Request finished");
+      console.log(" Request finished");
     }
   };
 
@@ -117,7 +117,7 @@ export default function NotePage() {
     }
 
     try {
-      console.log("🗑️ Deleting note:", id);
+      console.log(" Deleting note:", id);
 
       await axios.delete(`${import.meta.env.VITE_API_URL}/notes/${id}`, {
         headers: {
