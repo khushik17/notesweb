@@ -22,6 +22,8 @@ app.use(
 );
 
 /* -------------------- NODEMAILER (BREVO SMTP) -------------------- */
+console.log("BREVO_USER:", process.env.BREVO_USER);
+console.log("BREVO_PASS EXISTS:", !!process.env.BREVO_PASS);
 
 const transporter = nodemailer.createTransport({
   host: "smtp-relay.brevo.com",
